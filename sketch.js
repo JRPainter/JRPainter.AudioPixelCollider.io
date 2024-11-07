@@ -16,7 +16,7 @@ let waveform; // Waveform
 
 let circles = [];
 let bassEnergy;
-let freqThreshold = 100;
+let freqThreshold = 80;
 let beatThreshold = 150;
 let lastBeatTime = 0;
 let randDir;
