@@ -76,6 +76,8 @@ function draw() {
     if(startAudio){
         vol = mic.getLevel(); // Get volume level
         fft.analyze();
+        volSense = volSenseSlider.value(); // Get volume sensitivity
+        normVol = vol * volSense; // Normalize volume
         bassEnergy = fft.getEnergy("bass");
         console.log(bassEnergy);
 
@@ -118,8 +120,7 @@ function draw() {
         spectrum = fft.analyze(); // Get frequency spectrum
         waveform = fft.waveform(); // Get waveform
 
-        volSense = volSenseSlider.value(); // Get volume sensitivity
-        normVol = vol * volSense; // Normalize volume
+
 
         if(redTranslation && redOrigin > height/4) {
             redOrigin -= 1;
