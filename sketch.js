@@ -5,8 +5,9 @@ let mic; // Microphone input
 let vol; // Volume level
 let normVol; // Normalized volume level
 let volSense = 100; // Volume sensitivity
-let sliderStep = 10; // Slider step size
-let volSenseSlider; // Volume sensitivity slider
+let sensitivity = 0.5; // Sensitivity to volume changes
+let sensitivitySlider; // Slider to adjust sensitivity
+let alphaButton;
 let startAudio = false; // Start audio flag
 
 //Frequency variables
@@ -16,7 +17,7 @@ let waveform; // Waveform
 
 let circles = [];
 let bassEnergy;
-let freqThreshold = 80;
+let freqThreshold = 100;
 let beatThreshold = 150;
 let lastBeatTime = 0;
 let randDir;
@@ -24,6 +25,8 @@ let newCircle;
 let leftBlocker;
 let rightBlocker;
 let blockerY = window.innerHeight/2;
+
+let invert;
 
 let redOrigin;
 let blueOrigin;
@@ -34,7 +37,8 @@ let wheelHeight;
 let redTranslation;
 let blueTranslation;
 
-
+let leftWave;
+let rightWave;
 
 let shootAngle = 1;
 let shootRotation = false;
@@ -59,12 +63,26 @@ function setup() {
     blueTranslation = false;
     colorMode(HSB);
     getAudioContext().suspend();
+    leftWave = width/4;
+    rightWave = width*3/4;
+    invert = false;
 
-    volSenseSlider = createSlider(0, 200, volSense, sliderStep);
+
     if(shootAngle <= 1) {
         shootRotation = true;
     }
     shootAngle = random(1,19)/10;
+
+// Create a slider to adjust sensitivity
+sensitivitySlider = createSlider(0, 1, sensitivity, 0.01);
+sensitivitySlider.id('sensitivitySlider'); // Assign an ID to the slider
+
+alphaButton = createButton('Toggle Invert');
+alphaButton.id('alphaButton');
+alphaButton.mousePressed(() => {
+    invert = !invert; 
+  });
+
 
 }
 
@@ -76,7 +94,7 @@ function draw() {
     if(startAudio){
         vol = mic.getLevel(); // Get volume level
         fft.analyze();
-        volSense = volSenseSlider.value(); // Get volume sensitivity
+        volSense = sensitivitySlider.value(); // Get the sensitivity value from the slider
         normVol = vol * volSense; // Normalize volume
         bassEnergy = fft.getEnergy("bass");
         console.log(bassEnergy);
@@ -85,10 +103,15 @@ function draw() {
         
 
         randDir = Math.random() < 0.5;
-        if (bassEnergy > freqThreshold /*&& millis() - lastBeatTime >= 1000*/){
-        newCircle = new Circle(redX, redOrigin, 200, 200, color(0,100,100, 0.08), shootAngle, 2-shootAngle, false, false);
-        } else if (bassEnergy <= freqThreshold /*&& millis() - lastBeatTime >= 1000*/){
-        newCircle = new Circle(blueX, blueOrigin, 200, 200, color(240,100,100, 0.08), shootAngle, 2-shootAngle, true, true);
+        if (bassEnergy > freqThreshold && !invert){
+        newCircle = new Circle(redX + 100, redOrigin, 200, 200, color(0,100,100, 0.15), shootAngle, 2-shootAngle, false, false);
+        } else if (bassEnergy <= freqThreshold && !invert){
+        newCircle = new Circle(blueX - 100, blueOrigin, 200, 200, color(240,100,100, 0.15), shootAngle, 2-shootAngle, true, true);
+        }
+        if (bassEnergy <= freqThreshold && invert){
+        newCircle = new Circle(redX + 100, redOrigin, 200, 200, color(0,100,100, 0.15), shootAngle, 2-shootAngle, false, false);
+        } else if (bassEnergy > freqThreshold && invert){
+        newCircle = new Circle(blueX - 100, blueOrigin, 200, 200, color(240,100,100, 0.15), shootAngle, 2-shootAngle, true, true);
         }
 
         fill(0, 0, 50);
@@ -196,17 +219,15 @@ function waveForm(){
         
         beginShape();
         for(let i = 0; i < waveform.length; i++){
-            let x = map(i, 0, waveform.length, 0, width);
-            let y = map(waveform[i], -1, 1, 0, height);
+            let x = map(i, 0, waveform.length, 0, height);
+            let y = map(waveform[i], -1, 1, leftWave, rightWave);
             let strokeCol = map(waveform[i], -1, 1, 0, 360);
             let strokeSat = map(waveform[i], -1, 1, 0, 100);
-            //console.log(strokeCol);
-            //waveColor = color(strokeCol, strokeSat, 100);
 
             stroke(waveColor, 100, 100);
             strokeWeight(globeScale *0.01);
             
-            vertex(x, y);
+            vertex(y, x);
         }
 
         endShape();
@@ -237,25 +258,34 @@ function redRect(redCircle) {
   if (waveColor >0) {
     waveColor -= 20;
   }
+  if (rightWave < width) {
+    rightWave += width/24;
+    leftWave += width/24;
+  }
       let beginningBeam = millis();
       let redCircleY = redCircle.y;
       let redCircleHeight = redCircle.height;
       if (millis() - beginningBeam <= 100) {
         fill(0,100,100);
-        quad(0, height/2 + redCircleHeight/2, 0, height/2 - redCircleHeight/2, width, redCircleY/* - redCircleHeight/2*/, width, redCircleY/* + redCircleHeight/2*/);
+        quad(redX, redOrigin + cannonHeight/2, redX, redOrigin - cannonHeight/2, width, redCircleY - redCircleHeight/2, width, redCircleY + redCircleHeight/2);
       }
+
 }
 
 function blueRect(blueCircle) {
   if (waveColor < 240) {
     waveColor += 20;
   }
+  if (leftWave > 0) {
+    rightWave -= width/24;
+    leftWave -= width/24;
+  }
   let beginningBeam = millis();
   let blueCircleY = blueCircle.y;
   let blueCircleHeight = blueCircle.height;
   if (millis() - beginningBeam <= 100) {
     fill(240,100,100);
-    quad(0, blueCircleY/* + blueCircleHeight/2*/, 0, blueCircleY/* - blueCircleHeight/2*/, width, height/2 - blueCircleHeight/2, width, height/2 + blueCircleHeight/2);
+    quad(0, blueCircleY + blueCircleHeight/2, 0, blueCircleY - blueCircleHeight/2, blueX, blueOrigin - cannonHeight/2, blueX, blueOrigin + cannonHeight/2);
   }
 }
 
