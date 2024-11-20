@@ -27,6 +27,7 @@ let rightBlocker;
 let blockerY = window.innerHeight/2;
 
 let invert;
+let level;
 
 let redOrigin;
 let blueOrigin;
@@ -63,6 +64,7 @@ function setup() {
     blueTranslation = false;
     colorMode(HSB);
     getAudioContext().suspend();
+
     leftWave = width/4;
     rightWave = width*3/4;
     invert = false;
@@ -96,22 +98,25 @@ function draw() {
         fft.analyze();
         volSense = sensitivitySlider.value(); // Get the sensitivity value from the slider
         normVol = vol * volSense; // Normalize volume
-        bassEnergy = fft.getEnergy("bass");
-        console.log(bassEnergy);
+        console.log(normVol);
+        bassEnergy = fft.getEnergy("bass");       
+        level = map(normVol, 0, 0.15, 150, 250);
+
+
 
 
         
 
         randDir = Math.random() < 0.5;
         if (bassEnergy > freqThreshold && !invert){
-        newCircle = new Circle(redX + 100, redOrigin, 200, 200, color(0,100,100, 0.15), shootAngle, 2-shootAngle, false, false);
+        newCircle = new Circle(redX + level/2, redOrigin, level, level, color(0,100,100, 0.15), shootAngle, 2-shootAngle, false, false, level);
         } else if (bassEnergy <= freqThreshold && !invert){
-        newCircle = new Circle(blueX - 100, blueOrigin, 200, 200, color(240,100,100, 0.15), shootAngle, 2-shootAngle, true, true);
+        newCircle = new Circle(blueX - level/2, blueOrigin, level, level, color(240,100,100, 0.15), shootAngle, 2-shootAngle, true, true, level);
         }
         if (bassEnergy <= freqThreshold && invert){
-        newCircle = new Circle(redX + 100, redOrigin, 200, 200, color(0,100,100, 0.15), shootAngle, 2-shootAngle, false, false);
+        newCircle = new Circle(redX + level/2, redOrigin, level, level, color(0,100,100, 0.15), shootAngle, 2-shootAngle, false, false, level);
         } else if (bassEnergy > freqThreshold && invert){
-        newCircle = new Circle(blueX - 100, blueOrigin, 200, 200, color(240,100,100, 0.15), shootAngle, 2-shootAngle, true, true);
+        newCircle = new Circle(blueX - level/2, blueOrigin, level, level, color(240,100,100, 0.15), shootAngle, 2-shootAngle, true, true, level);
         }
 
         fill(0, 0, 50);
@@ -208,6 +213,7 @@ function mousePressed(){
         fft.setInput(mic);
         mic.start();
         startAudio = true;
+        
     }
 }
 
@@ -254,6 +260,13 @@ function spectrumF(){
 
 }
 
+
+function updateSize(circle) {
+  circle.width = level;
+  circle.height = level;
+}
+
+
 function redRect(redCircle) {
   if (waveColor >0) {
     waveColor -= 20;
@@ -293,7 +306,7 @@ function blueRect(blueCircle) {
 
 class Circle {
 
-    constructor(x, y, width, height, color, xSpeed, ySpeed, xDirection, yDirection) {
+    constructor(x, y, width, height, color, xSpeed, ySpeed, xDirection, yDirection, volume) {
       this.x = x;
       this.y = y;
       this.width = width;
@@ -303,6 +316,7 @@ class Circle {
       this.ySpeed = ySpeed;
       this.xDirection = xDirection;
       this.yDirection = yDirection;
+      this.volume = volume;
 
       if (this.xDirection) {
         this.xSpeed = -this.xSpeed;
@@ -317,6 +331,7 @@ class Circle {
       ellipse(this.x, this.y, this.width, this.height);
       this.x += this.xSpeed;
       this.y += this.ySpeed;
+      updateSize(this);
       
       if (this.x + this.width/2 <= 0) {
         blueRect(this);
@@ -337,6 +352,8 @@ class Circle {
       if (this.width == 0 && this.height == 0) {
         circles.splice(circles.indexOf(this), 1);
       }
+
+
     }
 
     
